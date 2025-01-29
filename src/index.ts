@@ -39,4 +39,15 @@ app.post('/upload', async (c) => {
   return c.json(uploadRes, 200)
 })
 
+app.get('/list', async (c) => {
+  const listReq = await fetch(`https://${process.env.KUBO_URL}/api/v0/pin/ls`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  const listRes = await listReq.json()
+  return c.json(listRes, 300)
+})
+
 export default app
