@@ -17,7 +17,6 @@ app.get('/id', async (c) => {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: ""
   })
   const res = await req.json()
   return c.json(res, 200)
