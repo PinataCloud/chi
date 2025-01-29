@@ -1,7 +1,9 @@
 {
   "name": "chi",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --watch main.ts",
+    "start": "bun run main.ts",
+    "build": "bun build main.ts --compile --outfile server"
   },
   "dependencies": {
     "hono": "^4.6.19"
