@@ -22,4 +22,23 @@ app.get('/id', async (c) => {
   return c.json(res, 200)
 })
 
+app.post('/upload', async (c) => {
+  const data = await c.req.formData()
+  const file = data.get('file')
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: 'No file provided' }, 400)
+  }
+  const formData = new FormData()
+  formData.append('file', file)
+  const uploadReq = await fetch(`https://${process.env.KUBO_URL}/api/v0/add`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream'
+    },
+    body: formData
+  })
+  const uploadRes = await uploadReq.json()
+  return c.json(uploadRes, 200)
+})
+
 export default app
