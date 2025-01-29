@@ -12,7 +12,7 @@ app.get('/', (c) => {
 })
 
 app.get('/id', async (c) => {
-  const req = await fetch(`${process.env.KUBO_URL}:5001/api/v0/id`, {
+  const req = await fetch(`http://${process.env.KUBO_URL}:5001/api/v0/id`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
