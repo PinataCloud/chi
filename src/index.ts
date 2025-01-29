@@ -11,8 +11,14 @@ app.get('/', (c) => {
   return c.text('Hello Hono!')
 })
 
-app.post('/id', async (c) => {
-  const req = await fetch(`${process.env.KUBO_URL}:5001/api/v0/id`)
+app.get('/id', async (c) => {
+  const req = await fetch(`${process.env.KUBO_URL}:5001/api/v0/id`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: ""
+  })
   const res = await req.json()
   return c.json(res, 200)
 })
