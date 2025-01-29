@@ -3,6 +3,8 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { KuboAddResponse } from './types'
 import { insertFileIntoQueue } from './utils/db'
+import { serve } from '@hono/node-server'
+
 
 const app = new Hono()
 app.use('*', logger())
@@ -42,9 +44,9 @@ app.post('/upload', async (c) => {
   const uploadRes: KuboAddResponse = await uploadReq.json()
   console.log(uploadRes)
   //  Store data in remote pin queue
-  if(rules && (!localOnly || localOnly === "false")) {
+  if (rules && (!localOnly || localOnly === "false")) {
     await insertFileIntoQueue(rules, uploadRes.Hash);
-  }  
+  }
 
   return c.json(uploadRes, 200)
 })
@@ -62,11 +64,17 @@ app.get('/list', async (c) => {
 
 app.get('/queue', async (c) => {
   try {
-    
+
   } catch (error) {
     console.log(error);
     return c.json({ message: "Server error" }, 500);
   }
 })
 
-export default app
+const port = 3000
+console.log(`Server is running on http://localhost:${port}`)
+
+serve({
+  fetch: app.fetch,
+  port
+})
