@@ -37,6 +37,7 @@ app.post('/upload', async (c) => {
     },
     body: formData
   })
+  console.log(uploadReq.status)
   const uploadRes = await uploadReq.json()
   return c.json(uploadRes, 200)
 })
