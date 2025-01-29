@@ -32,9 +32,6 @@ app.post('/upload', async (c) => {
   formData.append('file', file)
   const uploadReq = await fetch(`https://${process.env.KUBO_URL}/api/v0/add`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/octet-stream'
-    },
     body: formData
   })
   console.log(uploadReq.status)
