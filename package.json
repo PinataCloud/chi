@@ -1,7 +1,7 @@
 {
   "name": "chi",
   "scripts": {
-    "dev": "bun run --watch main.ts",
+    "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "build": "bun build src/index.ts --compile --outfile server"
   },
