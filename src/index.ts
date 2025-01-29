@@ -12,7 +12,7 @@ app.get('/', (c) => {
 })
 
 app.post('/id', async (c) => {
-  const req = await fetch('https://kubo.railway.internal:5001/api/v0/id')
+  const req = await fetch(`${process.env.KUBO_URL}:5001/api/v0/id`)
   const res = await req.json()
   return c.json(res, 200)
 })
