@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import { KuboAddResponse } from './types'
+import { insertFileIntoQueue } from './utils/db'
 
 const app = new Hono()
 app.use('*', logger())
@@ -23,6 +25,8 @@ app.get('/id', async (c) => {
 })
 
 app.post('/upload', async (c) => {
+  const localOnly = c.req.query("localOnly");
+  const rules = c.req.query("rules");
   const data = await c.req.formData()
   const file = data.get('file')
   if (!file || !(file instanceof File)) {
@@ -30,18 +34,23 @@ app.post('/upload', async (c) => {
   }
   const formData = new FormData()
   formData.append('file', file)
-  const uploadReq = await fetch(`https://${process.env.KUBO_URL}/api/v0/add`, {
+  const uploadReq = await fetch(`${process.env.KUBO_URL}/api/v0/add`, {
     method: 'POST',
     body: formData
   })
   console.log(uploadReq.status)
-  const uploadRes = await uploadReq.json()
+  const uploadRes: KuboAddResponse = await uploadReq.json()
   console.log(uploadRes)
+  //  Store data in remote pin queue
+  if(rules && (!localOnly || localOnly === "false")) {
+    await insertFileIntoQueue(rules, uploadRes.Hash);
+  }  
+
   return c.json(uploadRes, 200)
 })
 
 app.get('/list', async (c) => {
-  const listReq = await fetch(`https://${process.env.KUBO_URL}/api/v0/pin/ls`, {
+  const listReq = await fetch(`${process.env.KUBO_URL}/api/v0/pin/ls`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -49,6 +58,15 @@ app.get('/list', async (c) => {
   })
   const listRes = await listReq.json()
   return c.json(listRes, 300)
+})
+
+app.get('/queue', async (c) => {
+  try {
+    
+  } catch (error) {
+    console.log(error);
+    return c.json({ message: "Server error" }, 500);
+  }
 })
 
 export default app
