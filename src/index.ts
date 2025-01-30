@@ -9,6 +9,7 @@ import { addRemotePinningService, uploadToRemotePinningService } from './utils/p
 import cron from 'node-cron';
 import { serve } from '@hono/node-server'
 import dotenv from "dotenv";
+import { pay } from './utils/viem'
 
 dotenv.config();
 
@@ -35,10 +36,10 @@ app.get('/id', async (c) => {
 app.post('/upload', async (c) => {
   const localOnly = c.req.query("localOnly");
   const rules = c.req.query("rules");
-  
+
   const rulesSplit: string[] = rules && rules.includes("+") ? rules ? rules?.split("+") : [rules] : [""];
   rulesSplit.forEach((rule: string) => {
-    if(rule !== "" && !ALLOWED_RULES.includes(rule)) {
+    if (rule !== "" && !ALLOWED_RULES.includes(rule)) {
       return c.json({ message: "Invalid rules" }, 400)
     }
   })
@@ -58,7 +59,7 @@ app.post('/upload', async (c) => {
   const uploadRes: KuboAddResponse = await uploadReq.json()
   console.log(uploadRes)
   //  Store data in remote pin queue
-  if(rules && (!localOnly || localOnly === "false")) {
+  if (rules && (!localOnly || localOnly === "false")) {
     console.log("Adding to queue");
     await insertFileIntoQueue(rules, uploadRes.Hash);
   }
@@ -82,11 +83,11 @@ app.get('/remote/list', async (c) => {
     const pending = c.req.query("pending");
     const provider = c.req.query("provider");
     let filterOptions: FilterOptions = {}
-    if(pending) {
+    if (pending) {
       filterOptions["pending"] = true;
     }
 
-    if(provider) {
+    if (provider) {
       filterOptions["provider"] = provider.toUpperCase();
     }
 
@@ -102,34 +103,48 @@ const processQueue = async () => {
   try {
     const rows = await getPendingRemotePins();
     console.log(rows);
-    for(const row of rows) {
+    for (const row of rows) {
       try {
         //  get suggestion from AI
         const providerChoice = await getAiRecommendation(row.rules);
-        console.log({providerChoice});
-        if(providerChoice?.toUpperCase() === "PINATA") {
+        console.log({ providerChoice });
+        if (providerChoice?.toUpperCase() === "PINATA") {
           //  Add remote pinning service if it doesn't exist
           console.log("Adding Pinata as a remote pinning service");
           await addRemotePinningService("pinata", "https://api.pinata.cloud/psa", config.pinataJwt || "");
+          console.log("Paying fee 0.00001 ETH...")
+          const receipt = await pay()
+          if (receipt?.status === "reverted") {
+            console.log("Payment failed, upload reverted")
+            return
+          }
+          console.log("Payment succeeeded: ", receipt?.transactionHash)
           console.log("Uploading to Pinata")
           await uploadToRemotePinningService("", "pinata", row.cid);
           console.log("Uploaded!")
-        } else if(providerChoice?.toUpperCase() === "FILEBASE") {
+        } else if (providerChoice?.toUpperCase() === "FILEBASE") {
           console.log("Adding Filebase as a remote pinning service");
-          await addRemotePinningService("filebase", "https://api.filebase.io/v1/ipfs", config.filebaseKey || "")          
+          await addRemotePinningService("filebase", "https://api.filebase.io/v1/ipfs", config.filebaseKey || "")
           console.log("Uploading to Filebase")
+          console.log("Paying fee 0.00001 ETH...")
+          const receipt = await pay()
+          if (receipt?.status === "reverted") {
+            console.log("Payment failed, upload reverted")
+            return
+          }
+          console.log("Payment succeeeded: ", receipt?.transactionHash)
           // await uploadToRemotePinningService("", "filebase", row.cid);
           console.log("Uploaded!")
-        } 
+        }
 
         //  If no provider is selected, we keep it local
-        //  Then we update the table        
-        if(providerChoice) {
+        //  Then we update the table
+        if (providerChoice) {
           console.log("Updating row")
           await updateRemotePinStatus(row.id, false, providerChoice?.toUpperCase())
         } else {
           console.log("No provider chosen")
-        }     
+        }
       } catch (error) {
         console.log(error, row);
       }
