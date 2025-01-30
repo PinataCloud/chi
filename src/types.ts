@@ -14,3 +14,8 @@ export type RemoteQueue = {
     rules: string;
     created_at: string;
 }
+
+export type FilterOptions = {
+    pending?: boolean;
+    provider?: string;
+}
