@@ -28,5 +28,6 @@ export const ALLOWED_RULES = [
     "cheap_storage", 
     "cheap_bandwidth",
     "us_location", 
-    "eu_location"
+    "eu_location", 
+    "local_location"
 ]
