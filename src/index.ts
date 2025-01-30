@@ -1,14 +1,16 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { KuboAddResponse, RemoteQueue } from './types'
-import { deleteFromPinningQueue, getRemotePinningQueue, insertFileIntoQueue } from './utils/db'
+import { FilterOptions, KuboAddResponse, RemoteQueue } from './types'
+import { deleteFromPinningQueue, getPendingRemotePins, getRemotePinningQueue, insertFileIntoQueue, updateRemotePinStatus } from './utils/db'
 import { getAiRecommendation } from './utils/ai'
-import { config } from '../config'
+import { ALLOWED_RULES, config } from '../config'
 import { addRemotePinningService, uploadToRemotePinningService } from './utils/pinningService'
 import cron from 'node-cron';
 import { serve } from '@hono/node-server'
+import dotenv from "dotenv";
 
+dotenv.config();
 
 const app = new Hono()
 app.use('*', logger())
@@ -33,7 +35,14 @@ app.get('/id', async (c) => {
 app.post('/upload', async (c) => {
   const localOnly = c.req.query("localOnly");
   const rules = c.req.query("rules");
-  console.log(rules);
+  
+  const rulesSplit: string[] = rules && rules.includes("+") ? rules ? rules?.split("+") : [rules] : [""];
+  rulesSplit.forEach((rule: string) => {
+    if(rule !== "" && !ALLOWED_RULES.includes(rule)) {
+      return c.json({ message: "Invalid rules" }, 400)
+    }
+  })
+
   const data = await c.req.formData()
   const file = data.get('file')
   if (!file || !(file instanceof File)) {
@@ -57,7 +66,7 @@ app.post('/upload', async (c) => {
   return c.json(uploadRes, 200)
 })
 
-app.get('/list', async (c) => {
+app.get('/pins/list', async (c) => {
   const listReq = await fetch(`${process.env.KUBO_URL}/api/v0/pin/ls`, {
     method: 'POST',
     headers: {
@@ -68,9 +77,30 @@ app.get('/list', async (c) => {
   return c.json(listRes, 300)
 })
 
+app.get('/remote/list', async (c) => {
+  try {
+    const pending = c.req.query("pending");
+    const provider = c.req.query("provider");
+    let filterOptions: FilterOptions = {}
+    if(pending) {
+      filterOptions["pending"] = true;
+    }
+
+    if(provider) {
+      filterOptions["provider"] = provider;
+    }
+
+    const remotePins = await getRemotePinningQueue(filterOptions)
+    return c.json({ data: remotePins }, 200);
+  } catch (error) {
+    console.log(error);
+    return c.json({ message: "Server error" }, 500);
+  }
+})
+
 const processQueue = async () => {
   try {
-    const rows = await getRemotePinningQueue();
+    const rows = await getPendingRemotePins();
     console.log(rows);
     for(const row of rows) {
       try {
@@ -93,9 +123,13 @@ const processQueue = async () => {
         } 
 
         //  If no provider is selected, we keep it local
-        //  Then we remove from the queue
-        console.log("Deleting row")
-        await deleteFromPinningQueue(row.id);
+        //  Then we update the table        
+        if(providerChoice) {
+          console.log("Updating row")
+          await updateRemotePinStatus(row.id, false, providerChoice?.toUpperCase())
+        } else {
+          console.log("No provider chosen")
+        }     
       } catch (error) {
         console.log(error, row);
       }
