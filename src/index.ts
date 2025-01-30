@@ -7,6 +7,8 @@ import { getAiRecommendation } from './utils/ai'
 import { config } from '../config'
 import { addRemotePinningService, uploadToRemotePinningService } from './utils/pinningService'
 import cron from 'node-cron';
+import { serve } from '@hono/node-server'
+
 
 const app = new Hono()
 app.use('*', logger())
@@ -50,7 +52,7 @@ app.post('/upload', async (c) => {
   if(rules && (!localOnly || localOnly === "false")) {
     console.log("Adding to queue");
     await insertFileIntoQueue(rules, uploadRes.Hash);
-  }  
+  }
 
   return c.json(uploadRes, 200)
 })
@@ -65,8 +67,6 @@ app.get('/list', async (c) => {
   const listRes = await listReq.json()
   return c.json(listRes, 300)
 })
-
-export default app
 
 const processQueue = async () => {
   try {
@@ -106,8 +106,16 @@ const processQueue = async () => {
   }
 }
 
+const port = 3000
+console.log(`Server is running on http://localhost:${port}`)
+
 // Schedule the cron job to run every minute
 cron.schedule('* * * * *', () => {
   console.log('Running processQueue...');
   processQueue();
 });
+
+serve({
+  fetch: app.fetch,
+  port
+})
