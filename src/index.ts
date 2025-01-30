@@ -117,8 +117,8 @@ const processQueue = async () => {
         } else if(providerChoice?.toUpperCase() === "FILEBASE") {
           console.log("Adding Filebase as a remote pinning service");
           await addRemotePinningService("filebase", "https://api.filebase.io/v1/ipfs", config.filebaseKey || "")          
-          console.log("Uploading to Pinata")
-          await uploadToRemotePinningService("", "filebase", row.cid);
+          console.log("Uploading to Filebase")
+          // await uploadToRemotePinningService("", "filebase", row.cid);
           console.log("Uploaded!")
         } 
 
