@@ -1,8 +1,12 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { KuboAddResponse } from './types'
-import { insertFileIntoQueue } from './utils/db'
+import { KuboAddResponse, RemoteQueue } from './types'
+import { deleteFromPinningQueue, getRemotePinningQueue, insertFileIntoQueue } from './utils/db'
+import { getAiRecommendation } from './utils/ai'
+import { config } from '../config'
+import { addRemotePinningService, uploadToRemotePinningService } from './utils/pinningService'
+import cron from 'node-cron';
 
 const app = new Hono()
 app.use('*', logger())
@@ -27,6 +31,7 @@ app.get('/id', async (c) => {
 app.post('/upload', async (c) => {
   const localOnly = c.req.query("localOnly");
   const rules = c.req.query("rules");
+  console.log(rules);
   const data = await c.req.formData()
   const file = data.get('file')
   if (!file || !(file instanceof File)) {
@@ -43,6 +48,7 @@ app.post('/upload', async (c) => {
   console.log(uploadRes)
   //  Store data in remote pin queue
   if(rules && (!localOnly || localOnly === "false")) {
+    console.log("Adding to queue");
     await insertFileIntoQueue(rules, uploadRes.Hash);
   }  
 
@@ -60,13 +66,48 @@ app.get('/list', async (c) => {
   return c.json(listRes, 300)
 })
 
-app.get('/queue', async (c) => {
+export default app
+
+const processQueue = async () => {
   try {
-    
+    const rows = await getRemotePinningQueue();
+    console.log(rows);
+    for(const row of rows) {
+      try {
+        //  get suggestion from AI
+        const providerChoice = await getAiRecommendation(row.rules);
+        console.log({providerChoice});
+        if(providerChoice?.toUpperCase() === "PINATA") {
+          //  Add remote pinning service if it doesn't exist
+          console.log("Adding Pinata as a remote pinning service");
+          await addRemotePinningService("pinata", "https://api.pinata.cloud/psa", config.pinataJwt || "");
+          console.log("Uploading to Pinata")
+          await uploadToRemotePinningService("", "pinata", row.cid);
+          console.log("Uploaded!")
+        } else if(providerChoice?.toUpperCase() === "FILEBASE") {
+          console.log("Adding Filebase as a remote pinning service");
+          await addRemotePinningService("filebase", "https://api.filebase.io/v1/ipfs/pins", config.filebaseKey || "")          
+          console.log("Uploading to Pinata")
+          await uploadToRemotePinningService("", "filebase", row.cid);
+          console.log("Uploaded!")
+        } 
+
+        //  If no provider is selected, we keep it local
+        //  Then we remove from the queue
+        console.log("Deleting row")
+        await deleteFromPinningQueue(row.id);
+      } catch (error) {
+        console.log(error, row);
+      }
+    }
+    console.log("Done!");
   } catch (error) {
     console.log(error);
-    return c.json({ message: "Server error" }, 500);
   }
-})
+}
 
-export default app
+// Schedule the cron job to run every minute
+cron.schedule('* * * * *', () => {
+  console.log('Running processQueue...');
+  processQueue();
+});
