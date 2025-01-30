@@ -87,7 +87,7 @@ app.get('/remote/list', async (c) => {
     }
 
     if(provider) {
-      filterOptions["provider"] = provider;
+      filterOptions["provider"] = provider.toUpperCase();
     }
 
     const remotePins = await getRemotePinningQueue(filterOptions)
