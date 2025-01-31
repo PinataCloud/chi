@@ -4,6 +4,9 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "dotenv": "^16.4.7",
