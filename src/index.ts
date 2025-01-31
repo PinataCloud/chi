@@ -99,6 +99,16 @@ app.get('/remote/list', async (c) => {
   }
 })
 
+app.get('/queue', async (c) => {
+  try {
+    processQueue();
+    return c.json({ data: "success" }, 200);
+  } catch (error) {
+    console.log(error);
+    return c.json({ message: "Server error" }, 500);
+  }
+})
+
 const processQueue = async () => {
   try {
     const rows = await getPendingRemotePins();
