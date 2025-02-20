@@ -7,15 +7,3 @@ export type KuboAddResponse = {
   Name: string;
   Size: string;
 };
-
-export type RemoteQueue = {
-    id: number;
-    cid: string;
-    rules: string;
-    created_at: string;
-}
-
-export type FilterOptions = {
-    pending?: boolean;
-    provider?: string;
-}
