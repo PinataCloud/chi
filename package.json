@@ -13,7 +13,6 @@
     "hono": "^4.6.19",
     "node-cron": "^3.0.3",
     "openai": "^4.81.0",
-    "sqlite3": "^5.1.7",
     "viem": "^2.22.17"
   },
   "devDependencies": {
