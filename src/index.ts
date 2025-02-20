@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { KuboAddResponse } from './types'
-import { config } from '../config'
+import { pinata } from '../config'
 import { addRemotePinningService, uploadToRemotePinningService } from './utils/pinningService'
 import { serve } from '@hono/node-server'
 import dotenv from "dotenv";
@@ -45,7 +45,7 @@ app.post('/upload', async (c) => {
   const uploadRes: KuboAddResponse = await uploadReq.json()
   console.log(uploadRes)
   console.log("Adding Pinata as a remote pinning service");
-  await addRemotePinningService("pinata", "https://api.pinata.cloud/psa", config.pinataJwt || "");
+  await addRemotePinningService(pinata);
   console.log("Uploading to Pinata")
   await uploadToRemotePinningService("", "pinata", uploadRes.Hash);
   console.log("Uploaded!")

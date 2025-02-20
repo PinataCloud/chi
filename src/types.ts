@@ -7,3 +7,9 @@ export type KuboAddResponse = {
   Name: string;
   Size: string;
 };
+
+export type PinningService = {
+  name: string;
+  endpoint: string;
+  key: string;
+}
